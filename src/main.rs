@@ -8,6 +8,7 @@ use macroquad::prelude::*;
 use graphic_controller::GraphicController;
 use images_comparator::ImagesComparator;
 use stamp_generator::{Stamp, StampGenerator};
+use macroquad_canvas::Canvas2D;
 
 
 #[macroquad::main("BasicShapes")]
@@ -30,15 +31,22 @@ async fn main() {
         image_size.1
     );
 
+    let canvas = Canvas2D::new(image_size.0, image_size.1);
+
+    set_camera(&canvas.camera);
+    clear_background(WHITE);
+    set_default_camera();
+    next_frame().await;
+
     for i in 1..100 {
         let stamp: Stamp = sg.generate_stamp();
-        gc.draw(stamp).await;
+        gc.draw(stamp, &canvas).await;
 
-        let second_image = gc.extract_image();
+        let second_image = gc.extract_image(&canvas);
         let score: f64 = ic.compare_loaded_image_to(second_image);
         println!("Simmilarity score: {}", score);
 
-        let ten_millis = Duration::from_millis(10);
+        let ten_millis = Duration::from_millis(1);
         std::thread::sleep(ten_millis);
     }
 }

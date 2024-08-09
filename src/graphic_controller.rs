@@ -1,5 +1,6 @@
 use macroquad::prelude::*;
 use image::{ImageBuffer, Rgba};
+use macroquad_canvas::Canvas2D;
 
 use crate::stamp_generator::Stamp;
 
@@ -24,9 +25,10 @@ impl GraphicController {
         next_frame().await;
     }
 
-    pub async fn draw(&self, stamp: Stamp) {
-        let Stamp { char, size, color, pos_x, pos_y } = stamp;
+    pub async fn draw(&self, stamp: Stamp, canvas: &Canvas2D) {
+        set_camera(&canvas.camera);
         
+        let Stamp { char, size, color, pos_x, pos_y } = stamp;
         draw_text(
             &char.to_string(),
             pos_x,
@@ -35,18 +37,26 @@ impl GraphicController {
             color,
         );
 
+        set_default_camera();
+        canvas.draw();
         next_frame().await;
     }
 
-    pub fn extract_image(&self) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
-        let screen_data: Image = get_screen_data();
-        let raw_pixels = screen_data
+    pub fn extract_image(&self, canvas: &Canvas2D) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
+        let texture = canvas.get_texture();
+        let texture_data = texture.get_texture_data();
+        let raw_pixels = texture_data
             .bytes
             .chunks(4)
             .flat_map(|pixel| pixel.iter().cloned())
             .collect::<Vec<_>>();
 
-        ImageBuffer::<Rgba<u8>, Vec<u8>>::from_raw(screen_data.width as u32, screen_data.height as u32, raw_pixels)
-            .expect("Failed to create RgbaImage from screen data")
+
+        ImageBuffer::<Rgba<u8>, Vec<u8>>::from_raw(
+            texture.width() as u32,
+            texture.height()as u32,
+            raw_pixels,
+        )
+            .expect("Failed to create RgbaImage from canvas data")
     }
 }

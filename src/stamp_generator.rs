@@ -1,11 +1,11 @@
 use macroquad::color::Color;
 use rand::Rng;
 
-const MIN_SIZE: f32 = 100.0;
+const MIN_SIZE: f32 = 10.0;
 const MAX_SIZE: f32 = 300.0;
 const MIN_OPACITY: f32 = 0.2;
 const MAX_OPACITY: f32 = 1.0;
-const BORDER_OFFSET: f32 = MIN_SIZE;
+const BORDER_OFFSET: f32 = 10.0;
 
 
 pub struct Stamp {
