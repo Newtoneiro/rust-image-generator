@@ -1,32 +1,35 @@
-use macroquad::prelude::*;
-use image::GenericImageView;
-use graphic_controller::GraphicController; // For getting the dimensions of the image
-
 mod graphic_controller;
+mod images_comparator;
+
+use std::time::Duration;
+use image::{ImageBuffer, Rgba};
+use macroquad::prelude::*;
+use graphic_controller::GraphicController;
+use images_comparator::ImagesComparator;
 
 
 #[macroquad::main("BasicShapes")]
 async fn main() {
-    let mut gc: GraphicController = GraphicController::new("image.jpeg");
+    let image_path: &str = "image.jpeg";
+    let loaded_image: ImageBuffer<Rgba<u8>, Vec<u8>> = image::open(image_path)
+            .expect("Could not find test-image")
+            .into_rgba8();
     
-    loop {
-        gc.draw();
-       
-        let screen_data: Image = gc.get_screen_data();
-        let raw_pixels = screen_data.bytes.chunks(4)
-            .flat_map(|pixel| pixel.iter().cloned())
-            .collect::<Vec<_>>();
+    let gc = GraphicController::new(
+        loaded_image.width() as f32, loaded_image.height() as f32
+    ).await;
+    let ic = ImagesComparator::new(
+        loaded_image
+    );
 
-        let image_two: image::ImageBuffer<image::Rgba<u8>, Vec<u8>> = image::RgbaImage::from_raw(screen_data.width as u32, screen_data.height as u32, raw_pixels)
-            .expect("Failed to create RgbaImage from screen data");
+    // Print the screen size
+    
+    gc.draw().await;
 
-        let image_one: image::ImageBuffer<image::Rgba<u8>, Vec<u8>> = image::open("image.jpeg").expect("Could not find test-image").into_rgba8();
+    let second_image = gc.extract_image();
+    let score: f64 = ic.compare_loaded_image_to(second_image);
+    println!("Simmilarity score: {}", score);
 
-        let white = image::Rgb([255, 255, 255]);
-        let result = image_compare::rgba_blended_hybrid_compare((&image_one).into(), (&image_two).into(), white)
-            .expect("Images had different dimensions");
-        
-        println!("{}", result.score);
-
-    }
+    let ten_millis = Duration::from_millis(1000);
+    std::thread::sleep(ten_millis);
 }
