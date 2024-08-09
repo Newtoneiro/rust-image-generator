@@ -1,5 +1,3 @@
-use macroquad::prelude::*;
-
 const WHITE: image::Rgb<u8> = image::Rgb([255, 255, 255]);
 
 pub struct ImagesComparator {
