@@ -1,17 +1,22 @@
 use macroquad::prelude::*;
 use image::{ImageBuffer, Rgba};
 use macroquad_canvas::Canvas2D;
-
 use crate::stamp_generator::Stamp;
+use macroquad::text::TextParams;
+
+
+const FONT_SCALE: f32 = 1.0;
+const FONT_SCALE_ASPECT: f32 = 1.0;
 
 pub struct GraphicController {
 }
 
 impl GraphicController {
     pub async fn new(init_width: f32, init_height: f32) -> Self {
-        let gc = Self { };
+        let gc: GraphicController = Self { };
+        
         gc.set_screen_size(init_width, init_height).await;
-        gc.init_window().await;
+        
         gc
     }
 
@@ -19,27 +24,35 @@ impl GraphicController {
         request_new_screen_size(width, height);
         next_frame().await;
     }
-    
-    async fn init_window(&self) {
-        clear_background(WHITE);
-        next_frame().await;
-    }
 
-    pub async fn draw(&self, stamp: Stamp, canvas: &Canvas2D) {
+    pub async fn draw(&self, stamp: &Stamp, canvas: &Canvas2D) {
         set_camera(&canvas.camera);
-        
-        let Stamp { char, size, color, pos_x, pos_y } = stamp;
-        draw_text(
-            &char.to_string(),
-            pos_x,
-            pos_y,
-            size,
-            color,
+
+        draw_text_ex(
+            &stamp.char.to_string(),
+            stamp.pos_x,
+            stamp.pos_y,
+            self.get_text_params_from_stamp(&stamp),
         );
 
+        self.refresh_canvas(&canvas).await;
+    }
+
+    async fn refresh_canvas(&self, canvas: &Canvas2D) -> () {
         set_default_camera();
         canvas.draw();
         next_frame().await;
+    }
+
+    fn get_text_params_from_stamp(&self, stamp: &Stamp) -> TextParams {
+        TextParams {
+            font: None,
+            font_size: stamp.size as u16,
+            font_scale: FONT_SCALE,
+            font_scale_aspect: FONT_SCALE_ASPECT,
+            rotation: stamp.rotation,
+            color: stamp.color,
+        }
     }
 
     pub fn extract_image(&self, canvas: &Canvas2D) -> ImageBuffer<Rgba<u8>, Vec<u8>> {

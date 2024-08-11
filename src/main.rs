@@ -40,7 +40,7 @@ async fn main() {
 
     for i in 1..100 {
         let stamp: Stamp = sg.generate_stamp();
-        gc.draw(stamp, &canvas).await;
+        gc.draw(&stamp, &canvas).await;
 
         let second_image = gc.extract_image(&canvas);
         let score: f64 = ic.compare_loaded_image_to(second_image);

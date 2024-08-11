@@ -1,8 +1,9 @@
 use macroquad::color::Color;
 use rand::Rng;
+use std::f64::consts::PI;
 
 const MIN_SIZE: f32 = 10.0;
-const MAX_SIZE: f32 = 300.0;
+const MAX_SIZE: f32 = 500.0;
 const MIN_OPACITY: f32 = 0.2;
 const MAX_OPACITY: f32 = 1.0;
 const BORDER_OFFSET: f32 = 10.0;
@@ -14,6 +15,7 @@ pub struct Stamp {
     pub color: Color,
     pub pos_x: f32,
     pub pos_y: f32,
+    pub rotation: f32,
 }
 
 pub struct StampGenerator {
@@ -56,21 +58,26 @@ impl StampGenerator {
         }
     }
 
-    fn generate_position(&mut self, max_width: f32, max_height: f32) -> (f32, f32) {
+    fn generate_position(&mut self) -> (f32, f32) {
         (
-            self.rng.gen_range(0.0..max_width - BORDER_OFFSET),
-            self.rng.gen_range(BORDER_OFFSET..max_height - BORDER_OFFSET),
+            self.rng.gen_range(0.0..self.max_width - BORDER_OFFSET),
+            self.rng.gen_range(BORDER_OFFSET..self.max_height - BORDER_OFFSET),
         )
     }
 
+    fn generate_rotation(&mut self) -> f32 {
+        self.rng.gen_range(0.0..=2.0*PI) as f32
+    }
+
     pub fn generate_stamp(&mut self) -> Stamp {
-        let pos: (f32, f32) = self.generate_position(self.max_width, self.max_height);
+        let pos: (f32, f32) = self.generate_position();
         Stamp {
             char: self.generate_char(),
             size: self.generate_size(),
             color: self.generate_color(),
             pos_x: pos.0,
             pos_y: pos.1,
+            rotation: self.generate_rotation(),
         }
     }
 }
