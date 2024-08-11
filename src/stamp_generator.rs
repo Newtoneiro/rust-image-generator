@@ -25,10 +25,10 @@ pub struct StampGenerator {
 }
 
 impl StampGenerator {
-    pub fn new(image_width: f32, image_height: f32) -> Self {
+    pub fn new(canvas_width: f32, canvas_height: f32) -> Self {
         Self {
-            max_width: image_width,
-            max_height: image_height,
+            max_width: canvas_width,
+            max_height: canvas_height,
             rng: rand::thread_rng(),
         }
     }

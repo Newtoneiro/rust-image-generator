@@ -9,11 +9,13 @@ const FONT_SCALE: f32 = 1.0;
 const FONT_SCALE_ASPECT: f32 = 1.0;
 
 pub struct GraphicController {
+    init_width: f32,
+    init_height: f32,
 }
 
 impl GraphicController {
     pub async fn new(init_width: f32, init_height: f32) -> Self {
-        let gc: GraphicController = Self { };
+        let gc: GraphicController = Self { init_width, init_height };
         
         gc.set_screen_size(init_width, init_height).await;
         
@@ -34,11 +36,9 @@ impl GraphicController {
             stamp.pos_y,
             self.get_text_params_from_stamp(&stamp),
         );
-
-        self.refresh_canvas(&canvas).await;
     }
 
-    async fn refresh_canvas(&self, canvas: &Canvas2D) -> () {
+    pub async fn refresh_canvas(&self, canvas: &Canvas2D) -> () {
         set_default_camera();
         canvas.draw();
         next_frame().await;
@@ -53,6 +53,16 @@ impl GraphicController {
             rotation: stamp.rotation,
             color: stamp.color,
         }
+    }
+
+    pub async fn canvas_from_stamp_and_texture(&self, stamp: &Stamp, texture: &Texture2D) -> Canvas2D {
+        let canvas: Canvas2D = Canvas2D::new(self.init_width, self.init_height);
+        set_camera(&canvas.camera);
+        draw_texture(texture, 0.0, 0.0, WHITE);
+        self.draw(stamp, &canvas).await;
+        set_default_camera();
+
+        canvas
     }
 
     pub fn extract_image(&self, canvas: &Canvas2D) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
