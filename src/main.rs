@@ -24,7 +24,8 @@ async fn main() {
         loaded_image.width() as f32,
         loaded_image.height() as f32
     );
-    
+    let mut sg: StampGenerator = StampGenerator::new(image_size.0, image_size.1);
+    let ic: ImagesComparator = ImagesComparator::new(loaded_image);
     let gc: GraphicController = GraphicController::new(
         image_size.0,
         image_size.1
@@ -38,20 +39,14 @@ async fn main() {
     
     for iteration in 0..NUMBER_OF_ITERATIONS {
         println!("Iteration: {:?}/{:?}", iteration, NUMBER_OF_ITERATIONS);
-        let loaded_image = image::open(IMAGE_PATH)
-            .expect("Could not find test-image")
-            .into_rgba8();
-        let mut ea: EvolutionAlgorithm = EvolutionAlgorithm::new(
-            StampGenerator::new(
-                image_size.0,
-                image_size.1
-            ),
-            ImagesComparator::new(
-                loaded_image
-            )
-        );
+        let mut ea: EvolutionAlgorithm = EvolutionAlgorithm::new();
         
-        let next_stamp: &Stamp = ea.run(&canvas.get_texture().clone(), &gc).await;
+        let next_stamp: &Stamp = ea.run(
+            &canvas.get_texture().clone(),
+            &gc,
+            &ic,
+            &mut sg,
+        ).await;
         
         gc.draw(next_stamp, &canvas).await;
         gc.refresh_canvas(&canvas).await;

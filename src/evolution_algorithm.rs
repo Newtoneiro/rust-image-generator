@@ -2,11 +2,11 @@ use macroquad::{color::Color, texture::Texture2D};
 use macroquad_canvas::Canvas2D;
 use ordered_float::OrderedFloat;
 use crate::{
-    graphic_controller::GraphicController,
-    images_comparator::ImagesComparator,
-    stamp_generator::{Stamp, StampGenerator}
+    graphic_controller::GraphicController, images_comparator::{self, ImagesComparator}, stamp_generator::{self, Stamp, StampGenerator}
 };
 use rand::{seq::SliceRandom, Rng};
+use futures::stream::FuturesUnordered;
+use futures::stream::StreamExt;
 
 const POPULATION_SIZE: u16 = 20;
 const PROMOTION_RATIO: f32 = 0.25;
@@ -21,28 +21,24 @@ struct Individual {
 }
 
 pub struct EvolutionAlgorithm {
-    stamp_generator: StampGenerator,
-    images_comparator: ImagesComparator,
     population: Vec<Individual>,
 }
 
 impl EvolutionAlgorithm {
-    pub fn new(stamp_generator: StampGenerator, images_comparator: ImagesComparator) -> Self {
+    pub fn new() -> Self {
         let population: Vec<Individual> = Vec::new();
         let evolution_algorithm: EvolutionAlgorithm = EvolutionAlgorithm {
-            stamp_generator,
-            images_comparator,
             population,
         };
 
         evolution_algorithm
     }
 
-    fn init_population(&mut self) -> () {
+    fn init_population(&mut self, stamp_generator: &mut StampGenerator) -> () {
         self.population.clear();
 
         for _ in 0..POPULATION_SIZE {
-            let stamp: Stamp = self.stamp_generator.generate_stamp();
+            let stamp: Stamp = stamp_generator.generate_stamp();
             self.population.push(
                 Individual { stamp: stamp, score: 0.0 }
             );
@@ -52,15 +48,31 @@ impl EvolutionAlgorithm {
     pub async fn eval_population(
             &mut self,
             cur_texture: &Texture2D,
-            graphic_controller: &GraphicController
+            graphic_controller: &GraphicController,
+            images_comparator: &ImagesComparator
         ) -> () {
+        let mut futures = FuturesUnordered::new();
+
         for individual in self.population.iter_mut() {
-            let canvas: Canvas2D = graphic_controller.canvas_from_stamp_and_texture(&individual.stamp, cur_texture).await;
-            individual.score = self.images_comparator.compare_loaded_image_to(graphic_controller.extract_image(&canvas));
+            let graphic_controller_clone = graphic_controller.clone();
+            let cur_texture_clone = cur_texture.clone();
+            let images_comparator_clone = images_comparator.clone();
+        
+            let future = async move {
+                let canvas: Canvas2D = graphic_controller_clone.canvas_from_stamp_and_texture(&individual.stamp, &cur_texture_clone).await;
+                let score = images_comparator_clone.compare_loaded_image_to(graphic_controller_clone.extract_image(&canvas));
+                (individual, score)
+            };
+        
+            futures.push(future);
+        }
+
+        while let Some((individual, score)) = futures.next().await {
+            individual.score = score;
         }
     }
 
-    pub fn make_new_generation(&mut self) {
+    pub fn make_new_generation(&mut self, stamp_generator: &mut StampGenerator) {
         self.population.sort_by_key(|individual| OrderedFloat(individual.score));
         let num_to_keep = (PROMOTION_RATIO * POPULATION_SIZE as f32) as usize;
         self.population.truncate(num_to_keep);
@@ -76,7 +88,7 @@ impl EvolutionAlgorithm {
         // Mutation
         println!("- Mutation...");
         for mut individual in new_population.iter_mut() {
-            self.mutate_individual(&mut individual);
+            self.mutate_individual(&mut individual, stamp_generator);
         }
 
         // Replace population
@@ -117,7 +129,7 @@ impl EvolutionAlgorithm {
         }
     }
 
-    fn mutate_individual(&mut self, individual: &mut Individual) -> () {
+    fn mutate_individual(&mut self, individual: &mut Individual, stamp_generator: &mut StampGenerator) -> () {
         let mut rng = rand::thread_rng();
 
         if rng.gen_bool(1.0 - INDIVIDUAL_MUT_PROB) {
@@ -126,29 +138,29 @@ impl EvolutionAlgorithm {
 
         // Mutate char
         if rng.gen_bool(ATTRIBUTE_MUT_PROB) {
-            individual.stamp.char = self.stamp_generator.generate_char(); // Function to generate a random char
+            individual.stamp.char = stamp_generator.generate_char(); // Function to generate a random char
         }
 
         // Mutate size
         if rng.gen_bool(ATTRIBUTE_MUT_PROB) {
-            individual.stamp.size = self.stamp_generator.generate_size(); // Random size in a reasonable range
+            individual.stamp.size = stamp_generator.generate_size(); // Random size in a reasonable range
         }
 
         // Mutate color
         if rng.gen_bool(ATTRIBUTE_MUT_PROB) {
-            individual.stamp.color = self.stamp_generator.generate_color();
+            individual.stamp.color = stamp_generator.generate_color();
         }
 
         // Mutate position
         if rng.gen_bool(ATTRIBUTE_MUT_PROB) {
-            let rand_pos: (f32, f32) = self.stamp_generator.generate_position();
+            let rand_pos: (f32, f32) = stamp_generator.generate_position();
             individual.stamp.pos_x = rand_pos.0; // Random position in a reasonable range
             individual.stamp.pos_y = rand_pos.1;
         }
 
         // Mutate rotation
         if rng.gen_bool(ATTRIBUTE_MUT_PROB) {
-            individual.stamp.rotation = self.stamp_generator.generate_rotation(); // Random rotation in degrees
+            individual.stamp.rotation = stamp_generator.generate_rotation(); // Random rotation in degrees
         }
     }
 
@@ -156,15 +168,25 @@ impl EvolutionAlgorithm {
         &self.population.iter().max_by_key(|n| OrderedFloat(n.score)).unwrap().stamp
     }
 
-    pub async fn run(&mut self, starting_texture: &Texture2D, graphic_controller: &GraphicController) -> &Stamp {
-        self.init_population();
+    pub async fn run(
+        &mut self,
+        starting_texture: &Texture2D,
+        graphic_controller: &GraphicController,
+        images_comparator: &ImagesComparator,
+        stamp_generator: &mut StampGenerator
+    ) -> &Stamp {
+        self.init_population(stamp_generator);
 
         for epoch in 0..EPOCHS {
             println!("EPOCH: {:?}/{:?}", epoch, EPOCHS);
             println!("Eval population...");
-            self.eval_population(starting_texture, &graphic_controller).await;
+            self.eval_population(
+                starting_texture,
+                graphic_controller,
+                images_comparator
+            ).await;
             println!("Make new generation...");
-            self.make_new_generation();
+            self.make_new_generation(stamp_generator);
         }
 
         self.get_best_stamp()
