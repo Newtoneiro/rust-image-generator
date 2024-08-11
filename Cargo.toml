@@ -4,9 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+futures = "0.3.30"
 image = "0.25.2"
 image-compare = "0.4.1"
 macroquad = "0.4.11"
 macroquad-canvas = "0.4.1"
 ordered-float = "4.2.2"
 rand = "0.8.5"
+rayon = "1.10.0"
+tokio = { version = "1", features = ["full", "rt"] }

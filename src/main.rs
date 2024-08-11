@@ -12,14 +12,14 @@ use evolution_algorithm::EvolutionAlgorithm;
 use macroquad_canvas::Canvas2D;
 
 
-const NUMBER_OF_ITERATIONS: u16 = 5;
+const NUMBER_OF_ITERATIONS: u16 = 1000;
+const IMAGE_PATH: &str = "image.jpg";
 
-#[macroquad::main("BasicShapes")]
+#[macroquad::main("ImageGenerator")]
 async fn main() {
-    let image_path: &str = "image.jpeg";
-    let loaded_image: ImageBuffer<Rgba<u8>, Vec<u8>> = image::open(image_path)
-            .expect("Could not find test-image")
-            .into_rgba8();
+    let loaded_image: ImageBuffer<Rgba<u8>, Vec<u8>> = image::open(IMAGE_PATH)
+    .expect("Could not find test-image")
+    .into_rgba8();
     let image_size: (f32, f32) = (
         loaded_image.width() as f32,
         loaded_image.height() as f32
@@ -29,15 +29,16 @@ async fn main() {
         image_size.0,
         image_size.1
     ).await;
-
+    
     let canvas = Canvas2D::new(image_size.0, image_size.1);
     set_camera(&canvas.camera);
     clear_background(WHITE);
     set_default_camera();
     next_frame().await;
-
-    for _ in 0..NUMBER_OF_ITERATIONS {
-        let loaded_image = image::open(image_path)
+    
+    for iteration in 0..NUMBER_OF_ITERATIONS {
+        println!("Iteration: {:?}/{:?}", iteration, NUMBER_OF_ITERATIONS);
+        let loaded_image = image::open(IMAGE_PATH)
             .expect("Could not find test-image")
             .into_rgba8();
         let mut ea: EvolutionAlgorithm = EvolutionAlgorithm::new(
@@ -49,16 +50,19 @@ async fn main() {
                 loaded_image
             )
         );
-
-        ea.eval_population(canvas.get_texture(), &gc).await;
-
-        let stamp: &Stamp = ea.get_best_stamp();
         
-        gc.draw(stamp, &canvas).await;
+        let next_stamp: &Stamp = ea.run(&canvas.get_texture().clone(), &gc).await;
+        
+        gc.draw(next_stamp, &canvas).await;
         gc.refresh_canvas(&canvas).await;
+    }
 
-        // let second_image = gc.extract_image(&canvas);
-        // let score: f64 = ic.compare_loaded_image_to(second_image);
-        // println!("Simmilarity score: {}", score);
+    println!("Done!");
+
+    loop {
+        if is_key_down(KeyCode::Space) {
+            break;
+        }
+        next_frame().await;
     }
 }
