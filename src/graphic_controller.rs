@@ -8,10 +8,12 @@ use macroquad::text::TextParams;
 const FONT_SCALE: f32 = 1.0;
 const FONT_SCALE_ASPECT: f32 = 1.0;
 
+#[derive(Clone)]
 pub struct GraphicController {
     init_width: f32,
     init_height: f32,
 }
+
 
 impl GraphicController {
     pub async fn new(init_width: f32, init_height: f32) -> Self {

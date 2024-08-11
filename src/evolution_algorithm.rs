@@ -2,11 +2,12 @@ use macroquad::{color::Color, texture::Texture2D};
 use macroquad_canvas::Canvas2D;
 use ordered_float::OrderedFloat;
 use crate::{
-    graphic_controller::GraphicController, images_comparator::{self, ImagesComparator}, stamp_generator::{self, Stamp, StampGenerator}
+    graphic_controller::GraphicController,
+    images_comparator::ImagesComparator,
+    stamp_generator::{Stamp, StampGenerator}
 };
 use rand::{seq::SliceRandom, Rng};
-use futures::stream::FuturesUnordered;
-use futures::stream::StreamExt;
+
 
 const POPULATION_SIZE: u16 = 20;
 const PROMOTION_RATIO: f32 = 0.25;
@@ -14,7 +15,7 @@ const INDIVIDUAL_MUT_PROB: f64 = 0.9;
 const ATTRIBUTE_MUT_PROB: f64 = 0.2;
 const EPOCHS: u16 = 20;
 
-
+#[derive(Clone)]
 struct Individual {
     stamp: Stamp,
     score: f64,
@@ -46,30 +47,29 @@ impl EvolutionAlgorithm {
     }
 
     pub async fn eval_population(
-            &mut self,
-            cur_texture: &Texture2D,
-            graphic_controller: &GraphicController,
-            images_comparator: &ImagesComparator
-        ) -> () {
-        let mut futures = FuturesUnordered::new();
-
-        for individual in self.population.iter_mut() {
-            let graphic_controller_clone = graphic_controller.clone();
-            let cur_texture_clone = cur_texture.clone();
-            let images_comparator_clone = images_comparator.clone();
-        
-            let future = async move {
-                let canvas: Canvas2D = graphic_controller_clone.canvas_from_stamp_and_texture(&individual.stamp, &cur_texture_clone).await;
-                let score = images_comparator_clone.compare_loaded_image_to(graphic_controller_clone.extract_image(&canvas));
-                (individual, score)
-            };
-        
-            futures.push(future);
+        &mut self,
+        cur_texture: &Texture2D,
+        graphic_controller: &GraphicController,
+        images_comparator: &ImagesComparator,
+    ) {
+        for mut individual in self.population.iter_mut() {
+            EvolutionAlgorithm::eval_individual(
+                &mut individual,
+                cur_texture,
+                graphic_controller,
+                images_comparator
+            ).await;
         }
+    }
 
-        while let Some((individual, score)) = futures.next().await {
-            individual.score = score;
-        }
+    async fn eval_individual(
+        individual: &mut Individual,
+        cur_texture: &Texture2D,
+        graphic_controller: &GraphicController,
+        images_comparator: &ImagesComparator
+    ) -> () {
+        let canvas: Canvas2D = graphic_controller.canvas_from_stamp_and_texture(&individual.stamp, &cur_texture).await;
+        individual.score = images_comparator.compare_loaded_image_to(graphic_controller.extract_image(&canvas));
     }
 
     pub fn make_new_generation(&mut self, stamp_generator: &mut StampGenerator) {

@@ -1,8 +1,9 @@
 const WHITE: image::Rgb<u8> = image::Rgb([255, 255, 255]);
 
+#[derive(Clone)]
 pub struct ImagesComparator {
     loaded_image: image::ImageBuffer<image::Rgba<u8>, Vec<u8>>,
- }
+}
 
 impl ImagesComparator {
     pub fn new(loaded_image: image::ImageBuffer<image::Rgba<u8>, Vec<u8>>) -> Self {

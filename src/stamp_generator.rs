@@ -9,6 +9,7 @@ const MAX_OPACITY: f32 = 1.0;
 const BORDER_OFFSET: f32 = 10.0;
 
 
+#[derive(Clone)]
 pub struct Stamp {
     pub char: String,
     pub size: f32,
