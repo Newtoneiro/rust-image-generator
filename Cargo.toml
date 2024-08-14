@@ -13,4 +13,5 @@ macroquad-canvas = "0.4.1"
 ordered-float = "4.2.2"
 rand = "0.8.5"
 rayon = "1.10.0"
+rusttype = "0.9.3"
 tokio = { version = "1", features = ["full"] }

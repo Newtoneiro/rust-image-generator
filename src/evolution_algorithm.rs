@@ -1,5 +1,3 @@
-use std::{thread::sleep, time::Duration};
-
 use macroquad::{color::Color, texture::Texture2D};
 use macroquad_canvas::Canvas2D;
 use ordered_float::OrderedFloat;
@@ -80,7 +78,7 @@ impl EvolutionAlgorithm {
         // Await all the tasks to complete
         let mut i = 0;
         for handle in handles {
-            println!("{:?} score: {:?}", i, handle.await.unwrap());
+            println!("{:?} score: {:?}", i,  handle.await.unwrap());
             i += 1;
         }
     }
@@ -91,9 +89,9 @@ impl EvolutionAlgorithm {
         graphic_controller: &GraphicController,
         images_comparator: &ImagesComparator
     ) -> f64 {
-        sleep(Duration::from_secs(1)); // Add a 1-second sleep
         // let canvas: Canvas2D = graphic_controller.canvas_from_stamp_and_texture(stamp, &cur_texture).await;
-        // images_comparator.compare_loaded_image_to(graphic_controller.extract_image(&canvas))
+        // let canvas: Canvas2D = Canvas2D::new(600.0, 800.0);
+        // images_comparator.compare_loaded_image_to(graphic_controller.extract_image(&canvas));
         0.0
     }
 

@@ -5,11 +5,11 @@ mod evolution_algorithm;
 
 use image::{ImageBuffer, Rgba};
 use macroquad::prelude::*;
+use macroquad_canvas::Canvas2D;
 use graphic_controller::GraphicController;
 use images_comparator::ImagesComparator;
 use stamp_generator::{Stamp, StampGenerator};
 use evolution_algorithm::EvolutionAlgorithm;
-use macroquad_canvas::Canvas2D;
 
 
 const NUMBER_OF_ITERATIONS: u16 = 1000;
@@ -54,11 +54,4 @@ async fn main() {
     }
 
     println!("Done!");
-
-    loop {
-        if is_key_down(KeyCode::Space) {
-            break;
-        }
-        next_frame().await;
-    }
 }
