@@ -16,6 +16,7 @@ const NUMBER_OF_ITERATIONS: u16 = 1000;
 const IMAGE_PATH: &str = "image.jpg";
 
 #[macroquad::main("ImageGenerator")]
+// #[tokio::main]
 async fn main() {
     let loaded_image: ImageBuffer<Rgba<u8>, Vec<u8>> = image::open(IMAGE_PATH)
     .expect("Could not find test-image")

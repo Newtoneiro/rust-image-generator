@@ -1,6 +1,9 @@
+use std::{thread::sleep, time::Duration};
+
 use macroquad::{color::Color, texture::Texture2D};
 use macroquad_canvas::Canvas2D;
 use ordered_float::OrderedFloat;
+use tokio::{runtime::Runtime, task};
 use crate::{
     graphic_controller::GraphicController,
     images_comparator::ImagesComparator,
@@ -52,24 +55,46 @@ impl EvolutionAlgorithm {
         graphic_controller: &GraphicController,
         images_comparator: &ImagesComparator,
     ) {
-        for mut individual in self.population.iter_mut() {
-            EvolutionAlgorithm::eval_individual(
-                &mut individual,
-                cur_texture,
-                graphic_controller,
-                images_comparator
-            ).await;
+        let mut handles = vec![];
+
+        for individual in self.population.iter() {
+            let cur_texture = cur_texture.clone();
+            let graphic_controller = graphic_controller.clone();
+            let images_comparator = images_comparator.clone();
+            let stamp_copy: Stamp = individual.stamp.clone();
+    
+            // Spawn each evaluation on a separate async task
+            let handle = task::spawn(async move {
+                EvolutionAlgorithm::eval_individual(
+                    &stamp_copy,
+                    &cur_texture,
+                    &graphic_controller,
+                    &images_comparator,
+                )
+                .await
+            });
+    
+            handles.push(handle);
+        }
+    
+        // Await all the tasks to complete
+        let mut i = 0;
+        for handle in handles {
+            println!("{:?} score: {:?}", i, handle.await.unwrap());
+            i += 1;
         }
     }
 
     async fn eval_individual(
-        individual: &mut Individual,
+        stamp: &Stamp,
         cur_texture: &Texture2D,
         graphic_controller: &GraphicController,
         images_comparator: &ImagesComparator
-    ) -> () {
-        let canvas: Canvas2D = graphic_controller.canvas_from_stamp_and_texture(&individual.stamp, &cur_texture).await;
-        individual.score = images_comparator.compare_loaded_image_to(graphic_controller.extract_image(&canvas));
+    ) -> f64 {
+        sleep(Duration::from_secs(1)); // Add a 1-second sleep
+        // let canvas: Canvas2D = graphic_controller.canvas_from_stamp_and_texture(stamp, &cur_texture).await;
+        // images_comparator.compare_loaded_image_to(graphic_controller.extract_image(&canvas))
+        0.0
     }
 
     pub fn make_new_generation(&mut self, stamp_generator: &mut StampGenerator) {
@@ -180,11 +205,14 @@ impl EvolutionAlgorithm {
         for epoch in 0..EPOCHS {
             println!("EPOCH: {:?}/{:?}", epoch, EPOCHS);
             println!("Eval population...");
-            self.eval_population(
-                starting_texture,
-                graphic_controller,
-                images_comparator
-            ).await;
+            let rt = Runtime::new().unwrap();
+            rt.block_on(async {
+                self.eval_population(
+                    starting_texture,
+                    graphic_controller,
+                    images_comparator
+                ).await;
+            });
             println!("Make new generation...");
             self.make_new_generation(stamp_generator);
         }

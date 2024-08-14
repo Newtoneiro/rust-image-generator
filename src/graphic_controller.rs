@@ -59,10 +59,10 @@ impl GraphicController {
 
     pub async fn canvas_from_stamp_and_texture(&self, stamp: &Stamp, texture: &Texture2D) -> Canvas2D {
         let canvas: Canvas2D = Canvas2D::new(self.init_width, self.init_height);
-        set_camera(&canvas.camera);
-        draw_texture(texture, 0.0, 0.0, WHITE);
-        self.draw(stamp, &canvas).await;
-        set_default_camera();
+        // set_camera(&canvas.camera);
+        // draw_texture(texture, 0.0, 0.0, WHITE);
+        // self.draw(stamp, &canvas).await;
+        // set_default_camera();
 
         canvas
     }
