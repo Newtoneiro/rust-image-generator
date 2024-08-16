@@ -1,87 +1,36 @@
-use macroquad::prelude::*;
-use image::{ImageBuffer, Rgba};
-use macroquad_canvas::Canvas2D;
+use ab_glyph::{FontRef, PxScale};
+use image::{ImageBuffer, Rgb};
+use imageproc::drawing::draw_text_mut;
 use crate::stamp_generator::Stamp;
-use macroquad::text::TextParams;
 
 
-const FONT_SCALE: f32 = 1.0;
-const FONT_SCALE_ASPECT: f32 = 1.0;
-
-#[derive(Clone)]
 pub struct GraphicController {
-    init_width: f32,
-    init_height: f32,
+    font: FontRef<'static>,
 }
 
 
 impl GraphicController {
-    pub async fn new(init_width: f32, init_height: f32) -> Self {
-        let gc: GraphicController = Self { init_width, init_height };
-        
-        gc.set_screen_size(init_width, init_height).await;
+    pub fn new() -> Self {
+        let font = FontRef::try_from_slice(include_bytes!("DejaVuSans.ttf")).unwrap();
+        let gc: GraphicController = Self { font };
         
         gc
     }
 
-    async fn set_screen_size(&self, width: f32, height: f32) {
-        request_new_screen_size(width, height);
-        next_frame().await;
-    }
+    pub fn draw(&self, canvas: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, stamp: &Stamp) {
+        let scale = PxScale {
+            x: stamp.size,
+            y: stamp.size,
+        };
 
-    pub async fn draw(&self, stamp: &Stamp, canvas: &Canvas2D) {
-        set_camera(&canvas.camera);
-
-        draw_text_ex(
-            &stamp.char.to_string(),
+        draw_text_mut(
+            canvas,
+            stamp.color,
             stamp.pos_x,
             stamp.pos_y,
-            self.get_text_params_from_stamp(&stamp),
+            scale,
+            &self.font,
+            &stamp.char,
         );
-    }
-
-    pub async fn refresh_canvas(&self, canvas: &Canvas2D) -> () {
-        set_default_camera();
-        canvas.draw();
-        next_frame().await;
-    }
-
-    fn get_text_params_from_stamp(&self, stamp: &Stamp) -> TextParams {
-        TextParams {
-            font: None,
-            font_size: stamp.size as u16,
-            font_scale: FONT_SCALE,
-            font_scale_aspect: FONT_SCALE_ASPECT,
-            rotation: stamp.rotation,
-            color: stamp.color,
-        }
-    }
-
-    pub async fn canvas_from_stamp_and_texture(&self, stamp: &Stamp, texture: &Texture2D) -> Canvas2D {
-        let canvas: Canvas2D = Canvas2D::new(self.init_width, self.init_height);
-        set_camera(&canvas.camera);
-        draw_texture(texture, 0.0, 0.0, WHITE);
-        self.draw(stamp, &canvas).await;
-        set_default_camera();
-
-        canvas
-    }
-
-    pub fn extract_image(&self, canvas: &Canvas2D) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
-        let texture = canvas.get_texture();
-        let texture_data = texture.get_texture_data();
-        let raw_pixels = texture_data
-            .bytes
-            .chunks(4)
-            .flat_map(|pixel| pixel.iter().cloned())
-            .collect::<Vec<_>>();
-
-
-        ImageBuffer::<Rgba<u8>, Vec<u8>>::from_raw(
-            texture.width() as u32,
-            texture.height()as u32,
-            raw_pixels,
-        )
-            .expect("Failed to create RgbaImage from canvas data")
     }
 }

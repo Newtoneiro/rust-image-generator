@@ -1,7 +1,5 @@
-use macroquad::{color::Color, texture::Texture2D};
-use macroquad_canvas::Canvas2D;
+use image::{ImageBuffer, Rgb};
 use ordered_float::OrderedFloat;
-use tokio::{runtime::Runtime, task};
 use crate::{
     graphic_controller::GraphicController,
     images_comparator::ImagesComparator,
@@ -16,7 +14,6 @@ const INDIVIDUAL_MUT_PROB: f64 = 0.9;
 const ATTRIBUTE_MUT_PROB: f64 = 0.2;
 const EPOCHS: u16 = 20;
 
-#[derive(Clone)]
 struct Individual {
     stamp: Stamp,
     score: f64,
@@ -47,52 +44,31 @@ impl EvolutionAlgorithm {
         }
     }
 
-    pub async fn eval_population(
+    pub fn eval_population(
         &mut self,
-        cur_texture: &Texture2D,
+        cur_image: &ImageBuffer<Rgb<u8>, Vec<u8>>,
         graphic_controller: &GraphicController,
         images_comparator: &ImagesComparator,
     ) {
-        let mut handles = vec![];
-
         for individual in self.population.iter() {
-            let cur_texture = cur_texture.clone();
-            let graphic_controller = graphic_controller.clone();
-            let images_comparator = images_comparator.clone();
-            let stamp_copy: Stamp = individual.stamp.clone();
-    
-            // Spawn each evaluation on a separate async task
-            let handle = task::spawn(async move {
-                EvolutionAlgorithm::eval_individual(
-                    &stamp_copy,
-                    &cur_texture,
-                    &graphic_controller,
-                    &images_comparator,
-                )
-                .await
-            });
-    
-            handles.push(handle);
-        }
-    
-        // Await all the tasks to complete
-        let mut i = 0;
-        for handle in handles {
-            println!("{:?} score: {:?}", i,  handle.await.unwrap());
-            i += 1;
-        }
+            EvolutionAlgorithm::eval_individual(
+                &individual.stamp,
+                &mut cur_image.clone(),
+                &graphic_controller,
+                &images_comparator,
+            );
+        };
     }
 
-    async fn eval_individual(
+    fn eval_individual(
         stamp: &Stamp,
-        cur_texture: &Texture2D,
+        image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>,
         graphic_controller: &GraphicController,
         images_comparator: &ImagesComparator
     ) -> f64 {
-        // let canvas: Canvas2D = graphic_controller.canvas_from_stamp_and_texture(stamp, &cur_texture).await;
-        // let canvas: Canvas2D = Canvas2D::new(600.0, 800.0);
-        // images_comparator.compare_loaded_image_to(graphic_controller.extract_image(&canvas));
-        0.0
+        graphic_controller.draw(image, stamp);
+
+        images_comparator.compare_loaded_image_to(&image)
     }
 
     pub fn make_new_generation(&mut self, stamp_generator: &mut StampGenerator) {
@@ -133,15 +109,14 @@ impl EvolutionAlgorithm {
         let offspring_stamp = Stamp {
             char: if rng.gen_bool(0.5) { parent1.stamp.char.clone() } else { parent2.stamp.char.clone() },
             size: (parent1.stamp.size + parent2.stamp.size) / 2.0, // Average size
-            color: Color {
-                r: rng.gen_range(parent1.stamp.color.r.min(parent2.stamp.color.r)..=parent1.stamp.color.r.max(parent2.stamp.color.r)),
-                g: rng.gen_range(parent1.stamp.color.g.min(parent2.stamp.color.g)..=parent1.stamp.color.g.max(parent2.stamp.color.g)),
-                b: rng.gen_range(parent1.stamp.color.b.min(parent2.stamp.color.b)..=parent1.stamp.color.b.max(parent2.stamp.color.b)),
-                a: rng.gen_range(parent1.stamp.color.a.min(parent2.stamp.color.a)..=parent1.stamp.color.a.max(parent2.stamp.color.a)),
-            },
-            pos_x: (parent1.stamp.pos_x + parent2.stamp.pos_x) / 2.0,
-            pos_y: (parent1.stamp.pos_y + parent2.stamp.pos_y) / 2.0,
-            rotation: (parent1.stamp.rotation + parent2.stamp.rotation) / 2.0,
+            color: Rgb([
+                rng.gen_range(parent1.stamp.color[0].min(parent2.stamp.color[0])..=parent1.stamp.color[0].max(parent2.stamp.color[0])),
+                rng.gen_range(parent1.stamp.color[1].min(parent2.stamp.color[1])..=parent1.stamp.color[1].max(parent2.stamp.color[1])),
+                rng.gen_range(parent1.stamp.color[2].min(parent2.stamp.color[2])..=parent1.stamp.color[2].max(parent2.stamp.color[2])),
+            ]),
+
+            pos_x: (parent1.stamp.pos_x + parent2.stamp.pos_x) / 2,
+            pos_y: (parent1.stamp.pos_y + parent2.stamp.pos_y) / 2,
         };
 
         // Step 3: Create a new Individual with the offspring's stamp and default or calculated score
@@ -176,14 +151,9 @@ impl EvolutionAlgorithm {
 
         // Mutate position
         if rng.gen_bool(ATTRIBUTE_MUT_PROB) {
-            let rand_pos: (f32, f32) = stamp_generator.generate_position();
+            let rand_pos: (i32, i32) = stamp_generator.generate_position();
             individual.stamp.pos_x = rand_pos.0; // Random position in a reasonable range
             individual.stamp.pos_y = rand_pos.1;
-        }
-
-        // Mutate rotation
-        if rng.gen_bool(ATTRIBUTE_MUT_PROB) {
-            individual.stamp.rotation = stamp_generator.generate_rotation(); // Random rotation in degrees
         }
     }
 
@@ -191,9 +161,9 @@ impl EvolutionAlgorithm {
         &self.population.iter().max_by_key(|n| OrderedFloat(n.score)).unwrap().stamp
     }
 
-    pub async fn run(
+    pub fn run(
         &mut self,
-        starting_texture: &Texture2D,
+        starting_image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>,
         graphic_controller: &GraphicController,
         images_comparator: &ImagesComparator,
         stamp_generator: &mut StampGenerator
@@ -203,14 +173,11 @@ impl EvolutionAlgorithm {
         for epoch in 0..EPOCHS {
             println!("EPOCH: {:?}/{:?}", epoch, EPOCHS);
             println!("Eval population...");
-            let rt = Runtime::new().unwrap();
-            rt.block_on(async {
-                self.eval_population(
-                    starting_texture,
-                    graphic_controller,
-                    images_comparator
-                ).await;
-            });
+            self.eval_population(
+                starting_image,
+                graphic_controller,
+                images_comparator
+            );
             println!("Make new generation...");
             self.make_new_generation(stamp_generator);
         }
