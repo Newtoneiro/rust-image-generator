@@ -1,7 +1,7 @@
 use image::Rgb;
 use rand::Rng;
 
-const MIN_SIZE: f32 = 10.0;
+const MIN_SIZE: f32 = 2.0;
 const MAX_SIZE: f32 = 500.0;
 
 #[derive(Clone)]
