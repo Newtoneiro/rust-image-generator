@@ -8,13 +8,17 @@ pub struct ImagesComparator {
 
 impl ImagesComparator {
     pub fn new(loaded_image: RgbImage) -> Self {
-        let hasher = HasherConfig::new().to_hasher();
+        let hasher = HasherConfig::new()
+            .hash_alg(img_hash::HashAlg::Mean)
+            .hash_size(256, 256)
+            .to_hasher();
         let loaded_image_hash = hasher.hash_image(&loaded_image);
         Self { hasher, loaded_image_hash }
     }
 
     pub fn compare_loaded_image_to(&self, second_image: &RgbImage) -> f64 {
         let hash2 = self.hasher.hash_image(second_image);
-        self.loaded_image_hash.dist(&hash2) as f64
+        let distance = self.loaded_image_hash.dist(&hash2) as f64;
+        distance
     }
 }

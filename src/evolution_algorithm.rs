@@ -50,8 +50,8 @@ impl EvolutionAlgorithm {
         graphic_controller: &GraphicController,
         images_comparator: &ImagesComparator,
     ) {
-        for individual in self.population.iter() {
-            EvolutionAlgorithm::eval_individual(
+        for individual in self.population.iter_mut() {
+            individual.score = EvolutionAlgorithm::eval_individual(
                 &individual.stamp,
                 &mut cur_image.clone(),
                 &graphic_controller,
@@ -67,31 +67,31 @@ impl EvolutionAlgorithm {
         images_comparator: &ImagesComparator
     ) -> f64 {
         graphic_controller.draw(image, stamp);
-
         images_comparator.compare_loaded_image_to(&image)
     }
 
     pub fn make_new_generation(&mut self, stamp_generator: &mut StampGenerator) {
         self.population.sort_by_key(|individual| OrderedFloat(individual.score));
+        // Print population scores
+        for individual in self.population.iter() {
+            println!("Score: {}", individual.score);
+        }
         let num_to_keep = (PROMOTION_RATIO * POPULATION_SIZE as f32) as usize;
         self.population.truncate(num_to_keep);
 
         let mut new_population: Vec<Individual> = Vec::new();
 
         // Cross breeding
-        println!("- Cross breeding...");
         while new_population.len() < POPULATION_SIZE as usize {
             new_population.push(self.create_offspring(&self.population[..num_to_keep]))
         }
 
         // Mutation
-        println!("- Mutation...");
         for mut individual in new_population.iter_mut() {
             self.mutate_individual(&mut individual, stamp_generator);
         }
 
         // Replace population
-        println!("- Replace population...");
         self.population = new_population;
     }
 
@@ -99,13 +99,11 @@ impl EvolutionAlgorithm {
         let mut rng = rand::thread_rng();
 
         // Step 1: Select two random parents
-        println!("-- Select 2 parents...");
         let selected_parents: Vec<&Individual> = parents.choose_multiple(&mut rng, 2).collect();
         let parent1 = selected_parents[0];
         let parent2 = selected_parents[1];
 
         // Step 2: Combine their attributes to create an offspring
-        println!("-- Combine 2 parents...");
         let offspring_stamp = Stamp {
             char: if rng.gen_bool(0.5) { parent1.stamp.char.clone() } else { parent2.stamp.char.clone() },
             size: (parent1.stamp.size + parent2.stamp.size) / 2.0, // Average size
@@ -120,7 +118,6 @@ impl EvolutionAlgorithm {
         };
 
         // Step 3: Create a new Individual with the offspring's stamp and default or calculated score
-        println!("-- Create offspring...");
         Individual {
             stamp: offspring_stamp,
             score: 0.0,
@@ -158,7 +155,7 @@ impl EvolutionAlgorithm {
     }
 
     fn get_best_stamp(&mut self) -> &Stamp {
-        &self.population.iter().max_by_key(|n| OrderedFloat(n.score)).unwrap().stamp
+        &self.population.iter().min_by_key(|n| OrderedFloat(n.score)).unwrap().stamp
     }
 
     pub fn run(
