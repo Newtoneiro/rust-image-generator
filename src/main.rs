@@ -6,13 +6,13 @@ mod evolution_algorithm;
 
 use evolution_algorithm::EvolutionAlgorithm;
 use graphic_controller::GraphicController;
-use image::{ImageBuffer, RgbImage, Rgb};
+use image::RgbImage;
 use images_comparator::ImagesComparator;
 use stamp_generator::{StampGenerator, Stamp};
 
 
 const NUMBER_OF_ITERATIONS: u16 = 1000;
-const IMAGE_PATH: &str = "image.jpg";
+const IMAGE_PATH: &str = "image_watermelon.jpg";
 const OUTPUT_PATH: &str = "./output.png";
 
 struct ImageSize {
@@ -21,9 +21,10 @@ struct ImageSize {
 }
 
 fn main() {
-    let loaded_image: ImageBuffer<Rgb<u8>, Vec<u8>> = image::open(IMAGE_PATH)
+    let loaded_image: RgbImage = image::open(IMAGE_PATH)
         .expect("Could not find test-image")
-        .into_rgb8();
+        .to_rgb8();
+
     let image_size: ImageSize = ImageSize {
         width: loaded_image.width(),
         height: loaded_image.height(),

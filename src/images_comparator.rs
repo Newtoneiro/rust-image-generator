@@ -1,18 +1,20 @@
+use img_hash::{HasherConfig, ImageHash, Hasher};
+use image::RgbImage;
+
 pub struct ImagesComparator {
-    loaded_image: image::ImageBuffer<image::Rgb<u8>, Vec<u8>>,
+    hasher: Hasher,
+    loaded_image_hash: ImageHash,
 }
 
 impl ImagesComparator {
-    pub fn new(loaded_image: image::ImageBuffer<image::Rgb<u8>, Vec<u8>>) -> Self {
-        Self { loaded_image }
+    pub fn new(loaded_image: RgbImage) -> Self {
+        let hasher = HasherConfig::new().to_hasher();
+        let loaded_image_hash = hasher.hash_image(&loaded_image);
+        Self { hasher, loaded_image_hash }
     }
 
-    pub fn compare_loaded_image_to(&self, second_image: &image::ImageBuffer<image::Rgb<u8>, Vec<u8>>) -> f64 {
-        let result: image_compare::Similarity = image_compare::rgb_hybrid_compare(
-            (&self.loaded_image).into(),
-            second_image.into(),
-        ).expect("Images had different dimensions");
-        
-        result.score
+    pub fn compare_loaded_image_to(&self, second_image: &RgbImage) -> f64 {
+        let hash2 = self.hasher.hash_image(second_image);
+        self.loaded_image_hash.dist(&hash2) as f64
     }
 }

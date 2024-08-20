@@ -1,11 +1,11 @@
 use image::{ImageBuffer, Rgb};
 use ordered_float::OrderedFloat;
+use rand::{seq::SliceRandom, Rng};
 use crate::{
     graphic_controller::GraphicController,
     images_comparator::ImagesComparator,
     stamp_generator::{Stamp, StampGenerator}
 };
-use rand::{seq::SliceRandom, Rng};
 
 
 const POPULATION_SIZE: u16 = 20;

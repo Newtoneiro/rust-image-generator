@@ -1,24 +1,24 @@
-use ab_glyph::{FontRef, PxScale};
-use image::{ImageBuffer, Rgb};
+use img_hash::image::{ImageBuffer, Rgb};
 use imageproc::drawing::draw_text_mut;
 use crate::stamp_generator::Stamp;
+use rusttype::{Font, Scale};
 
 
 pub struct GraphicController {
-    font: FontRef<'static>,
+    font: Font<'static>,
 }
 
 
 impl GraphicController {
     pub fn new() -> Self {
-        let font = FontRef::try_from_slice(include_bytes!("DejaVuSans.ttf")).unwrap();
+        let font = Font::try_from_bytes(include_bytes!("DejaVuSans.ttf")).unwrap();
         let gc: GraphicController = Self { font };
         
         gc
     }
 
     pub fn draw(&self, canvas: &mut ImageBuffer<Rgb<u8>, Vec<u8>>, stamp: &Stamp) {
-        let scale = PxScale {
+        let scale = Scale {
             x: stamp.size,
             y: stamp.size,
         };
@@ -26,8 +26,8 @@ impl GraphicController {
         draw_text_mut(
             canvas,
             stamp.color,
-            stamp.pos_x,
-            stamp.pos_y,
+            stamp.pos_x as u32,
+            stamp.pos_y as u32,
             scale,
             &self.font,
             &stamp.char,
